@@ -1,0 +1,14 @@
+{
+  "name": "radical-intelligence",
+  "owner": {
+    "name": "Radical Intelligence",
+    "url": "https://radicalintelligence.ai"
+  },
+  "plugins": [
+    {
+      "name": "mailchimp",
+      "source": "./",
+      "description": "Mailchimp Marketing API tools — read audiences, campaigns, templates and reports; create and update templates; create, edit, send and schedule campaigns."
+    }
+  ]
+}

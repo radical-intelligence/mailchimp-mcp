@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mailchimp": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "env": {
+        "MAILCHIMP_API_KEY": "${MAILCHIMP_API_KEY}"
+      }
+    }
+  }
+}

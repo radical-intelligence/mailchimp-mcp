@@ -1,22 +1,34 @@
 # Mailchimp MCP Server
 
-[![npm version](https://img.shields.io/npm/v/@agentx-ai/mailchimp-mcp-server)](https://www.npmjs.com/package/@agentx-ai/mailchimp-mcp-server)
+A Model Context Protocol (MCP) server for the Mailchimp Marketing API v3 — with **read and write** support. Read audiences, campaigns, templates and reports; create and update templates; create, edit, send and schedule campaigns.
 
-[![Watch the Notion Tutorial video](https://img.shields.io/badge/Watch_on-YouTube-red?logo=youtube&style=for-the-badge)](https://youtu.be/YcUrRAnFp8Q)
-[![Website](https://img.shields.io/badge/Website-🌐-purple)](https://www.agentx.so/mcp/mailchimp)
+Forked from [AgentX-ai/mailchimp-mcp](https://github.com/AgentX-ai/mailchimp-mcp) (read-only) and extended by [Radical Intelligence](https://radicalintelligence.ai) with write capabilities and Claude Code plugin packaging.
 
-A Model Context Protocol (MCP) server that provides read-only access to Mailchimp's Marketing API for comprehensive email marketing data retrieval.
+## Installation
 
-## Usage
+### As a Claude Code plugin (recommended)
 
-The server can be used with any MCP client. Configure your client to use:
+```
+/plugin marketplace add radical-intelligence/mailchimp-mcp
+/plugin install mailchimp@radical-intelligence
+```
+
+Then make your API key available in your environment (e.g. in `~/.zshrc`):
+
+```bash
+export MAILCHIMP_API_KEY=your-api-key-here-us1
+```
+
+### As a plain MCP server
+
+Configure any MCP client to use:
 
 ```json
 {
   "mcpServers": {
     "mailchimp": {
-      "command": "npx",
-      "args": ["@agentx-ai/mailchimp-mcp-server"],
+      "command": "node",
+      "args": ["/path/to/mailchimp-mcp/dist/index.js"],
       "env": {
         "MAILCHIMP_API_KEY": "your-api-key-here"
       }
@@ -25,554 +37,70 @@ The server can be used with any MCP client. Configure your client to use:
 }
 ```
 
-## Features
-
-This MCP server supports the following Mailchimp Marketing API endpoints (read-only operations):
-
-### Automation Management
-
-**Note about automations:** These endpoints are for classic automations, not automation flows. Unfortunately those are not available in the [Mailchimp API](https://mailchimp.com/developer/marketing/api/customer-journeys-journeys-steps-actions/) as of yet.
-
-- **List Automations** - Get all automations in your account
-- **Get Automation** - Retrieve details of a specific automation
-
-### Automation Email Management
-
-- **List Automation Emails** - Get all emails in an automation
-- **Get Automation Email** - Retrieve details of a specific email
-
-### Subscriber Management
-
-- **List Automation Subscribers** - View subscribers in automation queue
-- **Get Automation Queue** - Get the automation email queue
-
-### List Management
-
-- **List Lists** - Get all lists in your account
-- **Get List** - Retrieve details of a specific list
-
-### Campaign Management
-
-- **List Campaigns** - Get all campaigns in your account
-- **Get Campaign** - Retrieve details of a specific campaign
-
-### Member Management
-
-- **List Members** - Get all members in a specific list
-- **Get Member** - Retrieve details of a specific member
-
-### Segment Management
-
-- **List Segments** - Get all segments in a specific list
-- **Get Segment** - Retrieve details of a specific segment
-
-### Template Management
-
-- **List Templates** - Get all templates in your account
-- **Get Template** - Retrieve details of a specific template
-
-### Reports and Analytics
-
-- **Get Automation Report** - Get automation report data
-- **Get Automation Email Report** - Get automation email report data
-- **Get Subscriber Activity** - Get subscriber activity for an automation email
-- **List Campaign Reports** - Get all campaign reports
-- **Get Campaign Report** - Get detailed report for a specific campaign
-
-### Account Information
-
-- **Get Account** - Get account information and statistics
-
-### Folder Management
-
-- **List Folders** - Get all campaign folders
-- **Get Folder** - Retrieve details of a specific folder
-
-### File Manager
-
-- **List Files** - Get all files in the File Manager
-- **Get File** - Retrieve details of a specific file
-
-### Landing Pages
-
-- **List Landing Pages** - Get all landing pages
-- **Get Landing Page** - Retrieve details of a specific landing page
-
-### E-commerce
-
-- **List Stores** - Get all e-commerce stores
-- **Get Store** - Retrieve details of a specific store
-- **List Products** - Get all products in a store
-- **Get Product** - Retrieve details of a specific product
-- **List Orders** - Get all orders in a store
-- **Get Order** - Retrieve details of a specific order
-
-### Conversations
-
-- **List Conversations** - Get all conversations
-- **Get Conversation** - Retrieve details of a specific conversation
-
-### Merge Fields
-
-- **List Merge Fields** - Get all merge fields in a specific list
-- **Get Merge Field** - Retrieve details of a specific merge field
-
-## Local Installation
-
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the project:
-   ```bash
-   npm run build
-   ```
-
-### Configuration
-
-Set the following environment variable:
-
-```bash
-MAILCHIMP_API_KEY=your-mailchimp-api-key-here
-```
-
-Your Mailchimp API key should include the data center suffix (e.g., `xxxxxxxxxxxxxxxx-us1`).
-
-### Available Tools
-
-#### Automation Management
-
-##### list_automations
-
-Lists all automations in your Mailchimp account.
-
-```typescript
-// No parameters required
-```
-
-##### get_automation
-
-Get details of a specific automation by workflow ID.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID of the automation
-}
-```
-
-#### Automation Email Management
-
-##### list_automation_emails
-
-List all emails in an automation.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-}
-```
-
-##### get_automation_email
-
-Get details of a specific email in an automation.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-  email_id: string; // Required: The email ID
-}
-```
-
-#### Subscriber Management
-
-##### list_automation_subscribers
-
-List subscribers in an automation email queue.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-  email_id: string; // Required: The email ID
-}
-```
-
-##### get_automation_queue
-
-Get the automation email queue.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-  email_id: string; // Required: The email ID
-}
-```
-
-#### List Management
-
-##### list_lists
-
-List all lists in your Mailchimp account.
-
-```typescript
-// No parameters required
-```
-
-##### get_list
-
-Get details of a specific list.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-}
-```
-
-#### Campaign Management
-
-##### list_campaigns
-
-List all campaigns in your Mailchimp account.
-
-```typescript
-// No parameters required
-```
-
-##### get_campaign
-
-Get details of a specific campaign.
-
-```typescript
-{
-  campaign_id: string; // Required: The campaign ID
-}
-```
-
-#### Member Management
-
-##### list_members
-
-List all members in a specific list.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-}
-```
-
-##### get_member
-
-Get details of a specific member.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-  subscriber_hash: string; // Required: The subscriber hash
-}
-```
-
-#### Segment Management
-
-##### list_segments
-
-List all segments in a specific list.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-}
-```
-
-##### get_segment
-
-Get details of a specific segment.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-  segment_id: number; // Required: The segment ID
-}
-```
-
-#### Template Management
-
-##### list_templates
-
-List all templates in your Mailchimp account.
-
-```typescript
-// No parameters required
-```
-
-##### get_template
-
-Get details of a specific template.
-
-```typescript
-{
-  template_id: number; // Required: The template ID
-}
-```
-
-#### Reports and Analytics
-
-##### get_automation_report
-
-Get automation report data.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-}
-```
-
-##### get_automation_email_report
-
-Get automation email report data.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-  email_id: string; // Required: The email ID
-}
-```
-
-##### get_subscriber_activity
-
-Get subscriber activity for an automation email.
-
-```typescript
-{
-  workflow_id: string; // Required: The workflow ID
-  email_id: string; // Required: The email ID
-  subscriber_hash: string; // Required: The subscriber hash
-}
-```
-
-##### list_campaign_reports
-
-List all campaign reports.
-
-```typescript
-// No parameters required
-```
-
-##### get_campaign_report
-
-Get detailed report for a specific campaign.
-
-```typescript
-{
-  campaign_id: string; // Required: The campaign ID
-}
-```
-
-#### Account Information
-
-##### get_account
-
-Get account information.
-
-```typescript
-// No parameters required
-```
-
-#### Folder Management
-
-##### list_folders
-
-List all campaign folders.
-
-```typescript
-// No parameters required
-```
-
-##### get_folder
-
-Get details of a specific folder.
-
-```typescript
-{
-  folder_id: string; // Required: The folder ID
-}
-```
-
-#### File Manager
-
-##### list_files
-
-List all files in the File Manager.
-
-```typescript
-// No parameters required
-```
-
-##### get_file
-
-Get details of a specific file.
-
-```typescript
-{
-  file_id: string; // Required: The file ID
-}
-```
-
-#### Landing Pages
-
-##### list_landing_pages
-
-List all landing pages.
-
-```typescript
-// No parameters required
-```
-
-##### get_landing_page
-
-Get details of a specific landing page.
-
-```typescript
-{
-  page_id: string; // Required: The landing page ID
-}
-```
-
-#### E-commerce
-
-##### list_stores
-
-List all e-commerce stores.
-
-```typescript
-// No parameters required
-```
-
-##### get_store
-
-Get details of a specific store.
-
-```typescript
-{
-  store_id: string; // Required: The store ID
-}
-```
-
-##### list_products
-
-List all products in a store.
-
-```typescript
-{
-  store_id: string; // Required: The store ID
-}
-```
-
-##### get_product
-
-Get details of a specific product.
-
-```typescript
-{
-  store_id: string; // Required: The store ID
-  product_id: string; // Required: The product ID
-}
-```
-
-##### list_orders
-
-List all orders in a store.
-
-```typescript
-{
-  store_id: string; // Required: The store ID
-}
-```
-
-##### get_order
-
-Get details of a specific order.
-
-```typescript
-{
-  store_id: string; // Required: The store ID
-  order_id: string; // Required: The order ID
-}
-```
-
-#### Conversations
-
-##### list_conversations
-
-List all conversations.
-
-```typescript
-// No parameters required
-```
-
-##### get_conversation
-
-Get details of a specific conversation.
-
-```typescript
-{
-  conversation_id: string; // Required: The conversation ID
-}
-```
-
-#### Merge Fields
-
-##### list_merge_fields
-
-List all merge fields in a specific list.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-}
-```
-
-##### get_merge_field
-
-Get details of a specific merge field.
-
-```typescript
-{
-  list_id: string; // Required: The list ID
-  merge_field_id: number; // Required: The merge field ID
-}
-```
+Your Mailchimp API key must include the data center suffix (e.g. `xxxxxxxxxxxxxxxx-us1`). Create one in Mailchimp under **Account & billing → Extras → API keys**.
+
+## Write capabilities
+
+These tools modify your Mailchimp account. `send_campaign` sends real email and is guarded by a required `confirm: true` parameter — clients should always get explicit user approval first.
+
+| Tool | What it does |
+| --- | --- |
+| `create_template` | Create a template from HTML (`POST /templates`) |
+| `update_template` | Replace a template's name/HTML (`PATCH /templates/{id}`) |
+| `create_campaign` | Create a **draft** campaign targeting an audience, optionally narrowed to a saved segment |
+| `update_campaign_settings` | Edit a draft's subject line, preview text, title, from name, reply-to |
+| `set_campaign_content` | Attach a template (or raw HTML) as the campaign content |
+| `get_campaign_send_checklist` | Mailchimp's pre-send checklist for a campaign |
+| `send_campaign` | Send immediately — irreversible, requires `confirm: true` |
+| `schedule_campaign` | Schedule a future send (UTC, quarter-hour boundaries; paid Mailchimp plans only) |
+| `unschedule_campaign` | Return a scheduled campaign to draft |
+
+### Typical flow: send a template to an audience
+
+Mailchimp doesn't send templates directly — a campaign carries the template to an audience:
+
+1. `create_template` (or pick an existing one via `list_templates`)
+2. `create_campaign` with `list_id` (and optionally `saved_segment_id`) — creates a draft
+3. `set_campaign_content` with the `template_id`
+4. `get_campaign_send_checklist` to verify it's ready
+5. `send_campaign` (with explicit user approval) or `schedule_campaign`
+
+### Notes and constraints
+
+- Templates created via the API are **code-edit only** — they can't be opened in Mailchimp's drag-and-drop editor.
+- `update_template` requires both `name` and `html`; the HTML fully replaces the existing markup.
+- `schedule_campaign` times must be UTC ISO 8601 on a quarter-hour boundary (`:00`/`:15`/`:30`/`:45`) and scheduling requires a paid Mailchimp plan.
+
+## Read capabilities
+
+All read tools from the original server are included (list/get pairs unless noted):
+
+- **Audiences & members**: lists, members, segments, merge fields
+- **Campaigns**: campaigns, campaign content, recipients, folders
+- **Templates**: templates
+- **Automations** (classic automations only — automation *flows* aren't exposed by the Mailchimp API): automations, automation emails, subscriber queues
+- **Reports & analytics**: campaign reports, automation reports, subscriber activity
+- **Account**: account info and statistics
+- **File manager**: files
+- **Landing pages**: landing pages
+- **E-commerce**: stores, products, orders
+- **Conversations**: conversations
 
 ## Development
 
-### Building
-
 ```bash
-npm run build
+npm install
+npm run build     # compile TypeScript to build/
+npm run bundle    # bundle to dist/index.js (single file, committed for plugin use)
+npm run inspector # test with the MCP inspector
 ```
 
-### Testing
-
-```bash
-npm test
-```
-
-### Development Mode
-
-```bash
-npm run watch
-```
-
-### Inspector
-
-```bash
-npm run inspector
-```
+`dist/index.js` is a bundled build artifact committed to the repo so the Claude Code plugin can run without an install/build step. It contains code only — the API key is always read from the environment at runtime and never stored in the repo. Rebuild it (`npm run bundle`) after changing anything in `src/`.
 
 ## API Reference
 
-This MCP server implements read-only operations from the Mailchimp Marketing API v3. For detailed API documentation, visit:
-https://mailchimp.com/developer/marketing/api/
+Built on the [Mailchimp Marketing API v3](https://mailchimp.com/developer/marketing/api/).
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

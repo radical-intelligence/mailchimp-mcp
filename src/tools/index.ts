@@ -537,6 +537,228 @@ export const getToolDefinitions = (service: MailchimpService) => [
       required: ["conversation_id"],
     },
   },
+  {
+    name: "create_template",
+    description:
+      "Create a new email template from HTML. Note: templates created via the API are code-edit only and cannot be edited in Mailchimp's drag-and-drop editor.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "The name of the template",
+        },
+        html: {
+          type: "string",
+          description: "The raw HTML for the template",
+        },
+        folder_id: {
+          type: "string",
+          description: "Optional folder ID to file the template under",
+        },
+      },
+      required: ["name", "html"],
+    },
+  },
+  {
+    name: "update_template",
+    description:
+      "Update an existing template. Mailchimp requires both name and html; the html fully replaces the template's existing markup, so fetch the current template first if you only want to tweak it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        template_id: {
+          type: "number",
+          description: "The template ID",
+        },
+        name: {
+          type: "string",
+          description: "The name of the template",
+        },
+        html: {
+          type: "string",
+          description: "The full replacement HTML for the template",
+        },
+        folder_id: {
+          type: "string",
+          description: "Optional folder ID to file the template under",
+        },
+      },
+      required: ["template_id", "name", "html"],
+    },
+  },
+  {
+    name: "create_campaign",
+    description:
+      "Create a new draft campaign targeting an audience (list), optionally narrowed to a saved segment. The campaign is created as a DRAFT — nothing is sent. Use set_campaign_content to attach a template or HTML, then send_campaign or schedule_campaign.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        list_id: {
+          type: "string",
+          description: "The audience (list) ID to send to",
+        },
+        subject_line: {
+          type: "string",
+          description: "The email subject line",
+        },
+        from_name: {
+          type: "string",
+          description: "The sender name recipients will see",
+        },
+        reply_to: {
+          type: "string",
+          description: "The reply-to email address",
+        },
+        title: {
+          type: "string",
+          description:
+            "Internal campaign title (defaults to the subject line)",
+        },
+        preview_text: {
+          type: "string",
+          description: "Optional preview/preheader text",
+        },
+        template_id: {
+          type: "number",
+          description: "Optional template ID to use for the campaign content",
+        },
+        saved_segment_id: {
+          type: "number",
+          description:
+            "Optional saved segment ID to target a subset of the audience instead of the full list",
+        },
+      },
+      required: ["list_id", "subject_line", "from_name", "reply_to"],
+    },
+  },
+  {
+    name: "update_campaign_settings",
+    description:
+      "Update settings (subject line, preview text, title, from name, reply-to) of an existing draft campaign",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID",
+        },
+        subject_line: {
+          type: "string",
+          description: "New subject line",
+        },
+        preview_text: {
+          type: "string",
+          description: "New preview/preheader text",
+        },
+        title: {
+          type: "string",
+          description: "New internal campaign title",
+        },
+        from_name: {
+          type: "string",
+          description: "New sender name",
+        },
+        reply_to: {
+          type: "string",
+          description: "New reply-to email address",
+        },
+      },
+      required: ["campaign_id"],
+    },
+  },
+  {
+    name: "set_campaign_content",
+    description:
+      "Set the content of a draft campaign, either from an existing template (template_id) or from raw HTML. Provide exactly one of template_id or html.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID",
+        },
+        template_id: {
+          type: "number",
+          description: "Template ID to use as the campaign content",
+        },
+        html: {
+          type: "string",
+          description: "Raw HTML to use as the campaign content",
+        },
+      },
+      required: ["campaign_id"],
+    },
+  },
+  {
+    name: "send_campaign",
+    description:
+      "IRREVERSIBLY send a campaign to its audience immediately. Real emails go out to real subscribers and this cannot be undone. Always confirm with the user and review the campaign (get_campaign, get_campaign_send_checklist) before calling. Requires confirm=true.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID",
+        },
+        confirm: {
+          type: "boolean",
+          description:
+            "Must be true. Safety acknowledgement that the user has explicitly approved sending this campaign now.",
+        },
+      },
+      required: ["campaign_id", "confirm"],
+    },
+  },
+  {
+    name: "schedule_campaign",
+    description:
+      "Schedule a draft campaign for a future send. schedule_time must be UTC ISO 8601 on a quarter-hour boundary (:00, :15, :30, :45), e.g. 2026-08-01T09:15:00+00:00. Requires a paid Mailchimp plan. Confirm with the user before scheduling.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID",
+        },
+        schedule_time: {
+          type: "string",
+          description:
+            "UTC ISO 8601 datetime on a quarter-hour boundary (:00/:15/:30/:45)",
+        },
+      },
+      required: ["campaign_id", "schedule_time"],
+    },
+  },
+  {
+    name: "unschedule_campaign",
+    description: "Unschedule a previously scheduled campaign, returning it to draft",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID",
+        },
+      },
+      required: ["campaign_id"],
+    },
+  },
+  {
+    name: "get_campaign_send_checklist",
+    description:
+      "Get Mailchimp's pre-send checklist for a campaign — items that must pass before the campaign can be sent",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID",
+        },
+      },
+      required: ["campaign_id"],
+    },
+  },
 ];
 
 export const handleToolCall = async (
@@ -1162,6 +1384,158 @@ export const handleToolCall = async (
           },
         ],
       };
+
+    case "create_template": {
+      const created = await service.createTemplate(
+        args.name,
+        args.html,
+        args.folder_id
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(created, null, 2),
+          },
+        ],
+      };
+    }
+
+    case "update_template": {
+      const updated = await service.updateTemplate(
+        args.template_id,
+        args.name,
+        args.html,
+        args.folder_id
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(updated, null, 2),
+          },
+        ],
+      };
+    }
+
+    case "create_campaign": {
+      const campaign = await service.createCampaign({
+        listId: args.list_id,
+        subjectLine: args.subject_line,
+        fromName: args.from_name,
+        replyTo: args.reply_to,
+        title: args.title,
+        previewText: args.preview_text,
+        templateId: args.template_id,
+        savedSegmentId: args.saved_segment_id,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(campaign, null, 2),
+          },
+        ],
+      };
+    }
+
+    case "update_campaign_settings": {
+      const settings: any = {};
+      if (args.subject_line !== undefined)
+        settings.subject_line = args.subject_line;
+      if (args.preview_text !== undefined)
+        settings.preview_text = args.preview_text;
+      if (args.title !== undefined) settings.title = args.title;
+      if (args.from_name !== undefined) settings.from_name = args.from_name;
+      if (args.reply_to !== undefined) settings.reply_to = args.reply_to;
+      const updated = await service.updateCampaignSettings(
+        args.campaign_id,
+        settings
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(updated, null, 2),
+          },
+        ],
+      };
+    }
+
+    case "set_campaign_content": {
+      if (!args.template_id && !args.html) {
+        throw new Error(
+          "set_campaign_content requires either template_id or html"
+        );
+      }
+      const content = await service.setCampaignContent(args.campaign_id, {
+        templateId: args.template_id,
+        html: args.html,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(content, null, 2),
+          },
+        ],
+      };
+    }
+
+    case "send_campaign": {
+      if (args.confirm !== true) {
+        throw new Error(
+          "send_campaign refused: confirm must be true. Get explicit user approval before sending."
+        );
+      }
+      await service.sendCampaign(args.campaign_id);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Campaign ${args.campaign_id} is sending. This cannot be undone.`,
+          },
+        ],
+      };
+    }
+
+    case "schedule_campaign": {
+      await service.scheduleCampaign(args.campaign_id, args.schedule_time);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Campaign ${args.campaign_id} scheduled for ${args.schedule_time} (UTC).`,
+          },
+        ],
+      };
+    }
+
+    case "unschedule_campaign": {
+      await service.unscheduleCampaign(args.campaign_id);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Campaign ${args.campaign_id} unscheduled and returned to draft.`,
+          },
+        ],
+      };
+    }
+
+    case "get_campaign_send_checklist": {
+      const checklist = await service.getCampaignSendChecklist(
+        args.campaign_id
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(checklist, null, 2),
+          },
+        ],
+      };
+    }
 
     default:
       throw new Error(`Unknown tool: ${name}`);
