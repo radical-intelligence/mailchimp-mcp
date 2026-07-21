@@ -59,7 +59,12 @@ export class MailchimpService {
       );
     }
 
-    return response.json() as Promise<T>;
+    // Action endpoints (send, schedule, unschedule) return 204 with no body
+    const text = await response.text();
+    if (!text) {
+      return {} as T;
+    }
+    return JSON.parse(text) as T;
   }
 
   private async makePaginatedRequest<T = any>(
@@ -659,6 +664,139 @@ export class MailchimpService {
   ): Promise<any> {
     return await this.makeRequest(
       `/ecommerce/stores/${storeId}/promo-rules/${promoRuleId}/promo-codes/${promoCodeId}`
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Write operations
+  // ---------------------------------------------------------------------
+
+  // Template Management (write)
+  async createTemplate(
+    name: string,
+    html: string,
+    folderId?: string
+  ): Promise<MailchimpTemplate> {
+    return await this.makeRequest("/templates", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        html,
+        ...(folderId ? { folder_id: folderId } : {}),
+      }),
+    });
+  }
+
+  // Mailchimp requires both name and html on PATCH; the html fully replaces
+  // the template's existing markup
+  async updateTemplate(
+    templateId: number,
+    name: string,
+    html: string,
+    folderId?: string
+  ): Promise<MailchimpTemplate> {
+    return await this.makeRequest(`/templates/${templateId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name,
+        html,
+        ...(folderId ? { folder_id: folderId } : {}),
+      }),
+    });
+  }
+
+  // Campaign Management (write)
+  async createCampaign(options: {
+    listId: string;
+    subjectLine: string;
+    fromName: string;
+    replyTo: string;
+    title?: string;
+    previewText?: string;
+    templateId?: number;
+    savedSegmentId?: number;
+  }): Promise<MailchimpCampaign> {
+    const settings: any = {
+      subject_line: options.subjectLine,
+      from_name: options.fromName,
+      reply_to: options.replyTo,
+      title: options.title || options.subjectLine,
+    };
+    if (options.previewText) {
+      settings.preview_text = options.previewText;
+    }
+    if (options.templateId) {
+      settings.template_id = options.templateId;
+    }
+
+    const recipients: any = { list_id: options.listId };
+    if (options.savedSegmentId) {
+      recipients.segment_opts = { saved_segment_id: options.savedSegmentId };
+    }
+
+    return await this.makeRequest("/campaigns", {
+      method: "POST",
+      body: JSON.stringify({ type: "regular", recipients, settings }),
+    });
+  }
+
+  async updateCampaignSettings(
+    campaignId: string,
+    settings: {
+      subject_line?: string;
+      preview_text?: string;
+      title?: string;
+      from_name?: string;
+      reply_to?: string;
+    }
+  ): Promise<MailchimpCampaign> {
+    return await this.makeRequest(`/campaigns/${campaignId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ settings }),
+    });
+  }
+
+  async setCampaignContent(
+    campaignId: string,
+    content: { templateId?: number; html?: string }
+  ): Promise<any> {
+    const body: any = {};
+    if (content.templateId) {
+      body.template = { id: content.templateId };
+    } else if (content.html) {
+      body.html = content.html;
+    }
+    return await this.makeRequest(`/campaigns/${campaignId}/content`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async sendCampaign(campaignId: string): Promise<any> {
+    return await this.makeRequest(`/campaigns/${campaignId}/actions/send`, {
+      method: "POST",
+    });
+  }
+
+  // scheduleTime must be UTC ISO 8601 on a quarter-hour (:00/:15/:30/:45);
+  // scheduling requires a paid Mailchimp plan
+  async scheduleCampaign(
+    campaignId: string,
+    scheduleTime: string
+  ): Promise<any> {
+    return await this.makeRequest(
+      `/campaigns/${campaignId}/actions/schedule`,
+      {
+        method: "POST",
+        body: JSON.stringify({ schedule_time: scheduleTime }),
+      }
+    );
+  }
+
+  async unscheduleCampaign(campaignId: string): Promise<any> {
+    return await this.makeRequest(
+      `/campaigns/${campaignId}/actions/unschedule`,
+      { method: "POST" }
     );
   }
 }

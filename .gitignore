@@ -4,9 +4,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build output
+# Build output (dist/ is committed so the Claude Code plugin runs without a build step)
 build/
-dist/
 
 # Environment variables
 .env
