@@ -1,6 +1,6 @@
 {
   "name": "@radical-intelligence/mailchimp-mcp-server",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "MCP server for the Mailchimp Marketing API with read and write support: audiences, campaigns, templates, reports, sending and scheduling",
   "author": "Radical Intelligence",
   "license": "MIT",
@@ -24,17 +24,20 @@
   ],
   "scripts": {
     "build": "tsc && chmod +x build/index.js",
+    "start": "node build/http.js",
     "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "prepare": "npm run build && npm run bundle",
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "0.6.0",
-    "node-fetch": "^3.3.2",
-    "dotenv": "^16.4.7"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.22.2",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
+    "@types/express": "^4.17.25",
     "@types/node": "^20.11.24",
     "esbuild": "^0.25.0",
     "typescript": "^5.3.3"

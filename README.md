@@ -19,6 +19,23 @@ Then make your API key available in your environment (e.g. in `~/.zshrc`):
 export MAILCHIMP_API_KEY=your-api-key-here-us1
 ```
 
+### As a claude.ai custom connector (web / mobile / desktop)
+
+The repo includes a remote MCP server (Streamable HTTP + OAuth) so it can be added to claude.ai as a custom connector (Pro/Max/Team/Enterprise plans).
+
+**Deploy** — any Node host works. On [Render](https://render.com), the included `render.yaml` blueprint sets everything up; a `Dockerfile` is also included for Fly/Railway/anywhere. Set these environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `MAILCHIMP_API_KEY` | Mailchimp API key (with data center suffix) |
+| `ACCESS_PASSWORD` | Password required to authorize a new connection (min 12 chars) |
+| `OAUTH_SIGNING_SECRET` | Random secret (min 32 chars) used to sign OAuth tokens — keep it stable across deploys |
+| `BASE_URL` | The public URL of the deployment, e.g. `https://mailchimp-mcp.onrender.com` |
+
+**Connect** — in claude.ai: Settings → Connectors → Add custom connector → enter `https://<your-host>/mcp`. Claude opens the authorization page; enter your `ACCESS_PASSWORD` to approve. Tokens are valid for 30 days, after which claude.ai re-authorizes.
+
+**How auth works**: the server implements OAuth 2.1 (dynamic client registration + PKCE) gated by the single access password. Tokens, codes, and client registrations are HMAC-signed and stateless — no database, and restarts don't invalidate connections (as long as `OAUTH_SIGNING_SECRET` is unchanged). Anyone without the password cannot connect, and every MCP request requires a valid bearer token.
+
 ### As a plain MCP server
 
 Configure any MCP client to use:
@@ -91,7 +108,8 @@ All read tools from the original server are included (list/get pairs unless note
 ```bash
 npm install
 npm run build     # compile TypeScript to build/
-npm run bundle    # bundle to dist/index.js (single file, committed for plugin use)
+npm run bundle    # bundle stdio server to dist/index.js (single file, committed for plugin use)
+npm start         # run the remote HTTP server (build/http.js)
 npm run inspector # test with the MCP inspector
 ```
 

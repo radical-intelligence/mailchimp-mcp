@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mailchimp-mcp
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: MAILCHIMP_API_KEY
+        sync: false
+      - key: ACCESS_PASSWORD
+        sync: false
+      - key: OAUTH_SIGNING_SECRET
+        generateValue: true
+      - key: BASE_URL
+        sync: false
