@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mailchimp-mcp",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+  // Secrets (set with `npx wrangler secret put <NAME>`):
+  //   MAILCHIMP_API_KEY    - Mailchimp API key with data center suffix
+  //   ACCESS_PASSWORD      - password required to authorize a connection (min 12 chars)
+  //   OAUTH_SIGNING_SECRET - random secret (min 32 chars); keep stable across deploys
+}

@@ -1,43 +1,26 @@
-import crypto from "crypto";
-import { Response } from "express";
-import {
-  OAuthServerProvider,
-  AuthorizationParams,
-} from "@modelcontextprotocol/sdk/server/auth/provider.js";
-import { OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
-import {
-  OAuthClientInformationFull,
-  OAuthTokens,
-} from "@modelcontextprotocol/sdk/shared/auth.js";
-import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import {
-  InvalidGrantError,
-  InvalidTokenError,
-} from "@modelcontextprotocol/sdk/server/auth/errors.js";
+import crypto from "node:crypto";
+import { Buffer } from "node:buffer";
 
 const AUTH_CODE_TTL_SECONDS = 10 * 60;
 const ACCESS_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+export interface ClientRecord {
+  redirectUris: string[];
+  clientName?: string;
 }
 
 /**
- * A stateless OAuth 2.1 provider guarded by a single access password.
+ * Stateless OAuth token machinery guarded by a single access password.
  *
  * Client registrations, authorization codes, and access tokens are all
  * HMAC-signed payloads rather than database rows, so the server needs no
- * storage and survives restarts/redeploys (important on hosts that spin
- * instances down). PKCE is validated by the SDK's token handler; codes are
- * single-flow by TTL rather than single-use, which PKCE makes safe against
- * interception replay.
+ * storage and survives restarts/redeploys. PKCE protects authorization
+ * codes against interception replay within their 10-minute TTL.
+ *
+ * Uses only node:crypto/node:buffer, which run both on Node and on
+ * Cloudflare Workers with the nodejs_compat flag.
  */
-export class PasswordOAuthProvider implements OAuthServerProvider {
+export class TokenService {
   private signingKey: Buffer;
   private passwordHash: Buffer;
 
@@ -106,6 +89,21 @@ export class PasswordOAuthProvider implements OAuthServerProvider {
     return crypto.timingSafeEqual(given, this.passwordHash);
   }
 
+  createClientId(redirectUris: string[], clientName?: string): string {
+    return this.sign({
+      t: "client",
+      ru: redirectUris,
+      n: clientName,
+      iat: Math.floor(Date.now() / 1000),
+    });
+  }
+
+  getClient(clientId: string): ClientRecord | undefined {
+    const payload = this.open(clientId, "client");
+    if (!payload || !Array.isArray(payload.ru)) return undefined;
+    return { redirectUris: payload.ru, clientName: payload.n };
+  }
+
   createAuthorizationCode(
     clientId: string,
     codeChallenge: string,
@@ -120,111 +118,54 @@ export class PasswordOAuthProvider implements OAuthServerProvider {
     });
   }
 
-  get clientsStore(): OAuthRegisteredClientsStore {
-    return {
-      getClient: (clientId: string) => {
-        const payload = this.open(clientId, "client");
-        if (!payload || !Array.isArray(payload.ru)) return undefined;
-        return {
-          client_id: clientId,
-          redirect_uris: payload.ru,
-          token_endpoint_auth_method: "none",
-          grant_types: ["authorization_code"],
-          response_types: ["code"],
-          client_name: payload.n,
-        };
-      },
-      registerClient: (client) => {
-        // The client_id itself carries the registration (signed), so
-        // registration needs no storage. Public client + PKCE only.
-        const clientId = this.sign({
-          t: "client",
-          ru: client.redirect_uris,
-          n: client.client_name,
-          iat: Math.floor(Date.now() / 1000),
-        });
-        return {
-          ...client,
-          client_id: clientId,
-          client_secret: undefined,
-          client_secret_expires_at: undefined,
-          token_endpoint_auth_method: "none",
-          grant_types: ["authorization_code"],
-          response_types: ["code"],
-        };
-      },
-    };
-  }
-
-  async authorize(
-    client: OAuthClientInformationFull,
-    params: AuthorizationParams,
-    res: Response
-  ): Promise<void> {
-    res
-      .status(200)
-      .type("html")
-      .send(
-        renderLoginPage({
-          clientId: client.client_id,
-          clientName: client.client_name,
-          redirectUri: params.redirectUri,
-          codeChallenge: params.codeChallenge,
-          state: params.state,
-        })
-      );
-  }
-
-  async challengeForAuthorizationCode(
-    client: OAuthClientInformationFull,
-    authorizationCode: string
-  ): Promise<string> {
-    const payload = this.open(authorizationCode, "code");
-    if (!payload || payload.cid !== client.client_id) {
-      throw new InvalidGrantError("Invalid or expired authorization code");
-    }
-    return payload.ch;
-  }
-
-  async exchangeAuthorizationCode(
-    client: OAuthClientInformationFull,
-    authorizationCode: string,
-    _codeVerifier?: string,
+  /**
+   * Validates an authorization code against the requesting client, PKCE
+   * verifier, and redirect URI. Returns an access token, or undefined with
+   * a reason if anything doesn't match.
+   */
+  redeemAuthorizationCode(
+    code: string,
+    clientId: string,
+    codeVerifier: string,
     redirectUri?: string
-  ): Promise<OAuthTokens> {
-    const payload = this.open(authorizationCode, "code");
-    if (!payload || payload.cid !== client.client_id) {
-      throw new InvalidGrantError("Invalid or expired authorization code");
+  ): { accessToken: string; expiresIn: number } | { error: string } {
+    const payload = this.open(code, "code");
+    if (!payload || payload.cid !== clientId) {
+      return { error: "Invalid or expired authorization code" };
     }
     if (redirectUri && redirectUri !== payload.ru) {
-      throw new InvalidGrantError("redirect_uri does not match");
+      return { error: "redirect_uri does not match" };
+    }
+    const challenge = crypto
+      .createHash("sha256")
+      .update(codeVerifier)
+      .digest("base64url");
+    if (challenge !== payload.ch) {
+      return { error: "PKCE code_verifier does not match" };
     }
     const exp = Math.floor(Date.now() / 1000) + ACCESS_TOKEN_TTL_SECONDS;
     return {
-      access_token: this.sign({ t: "access", cid: client.client_id, exp }),
-      token_type: "bearer",
-      expires_in: ACCESS_TOKEN_TTL_SECONDS,
+      accessToken: this.sign({ t: "access", cid: clientId, exp }),
+      expiresIn: ACCESS_TOKEN_TTL_SECONDS,
     };
   }
 
-  async exchangeRefreshToken(): Promise<OAuthTokens> {
-    throw new InvalidGrantError(
-      "Refresh tokens are not supported; re-authorize instead"
-    );
-  }
-
-  async verifyAccessToken(token: string): Promise<AuthInfo> {
+  verifyAccessToken(
+    token: string
+  ): { clientId: string; expiresAt: number } | undefined {
     const payload = this.open(token, "access");
-    if (!payload) {
-      throw new InvalidTokenError("Invalid or expired access token");
-    }
-    return {
-      token,
-      clientId: payload.cid,
-      scopes: [],
-      expiresAt: payload.exp,
-    };
+    if (!payload) return undefined;
+    return { clientId: payload.cid, expiresAt: payload.exp };
   }
+}
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export function renderLoginPage(options: {

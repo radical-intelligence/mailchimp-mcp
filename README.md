@@ -19,22 +19,26 @@ Then make your API key available in your environment (e.g. in `~/.zshrc`):
 export MAILCHIMP_API_KEY=your-api-key-here-us1
 ```
 
-### As a claude.ai custom connector (web / mobile / desktop)
+### As a claude.ai custom connector (web / mobile / desktop app)
 
-The repo includes a remote MCP server (Streamable HTTP + OAuth) so it can be added to claude.ai as a custom connector (Pro/Max/Team/Enterprise plans).
+The repo includes a remote MCP server (Streamable HTTP + OAuth) that runs on [Cloudflare Workers](https://workers.cloudflare.com/) — the free tier is enough (100k requests/day, no cold-start spin-downs, no credit card). A connector added once on claude.ai is available in the web app, mobile apps, and desktop app.
 
-**Deploy** — any Node host works. On [Render](https://render.com), the included `render.yaml` blueprint sets everything up; a `Dockerfile` is also included for Fly/Railway/anywhere. Set these environment variables:
+**Deploy** (one time, ~5 minutes):
 
-| Variable | Purpose |
-| --- | --- |
-| `MAILCHIMP_API_KEY` | Mailchimp API key (with data center suffix) |
-| `ACCESS_PASSWORD` | Password required to authorize a new connection (min 12 chars) |
-| `OAUTH_SIGNING_SECRET` | Random secret (min 32 chars) used to sign OAuth tokens — keep it stable across deploys |
-| `BASE_URL` | The public URL of the deployment, e.g. `https://mailchimp-mcp.onrender.com` |
+```bash
+npm install
+npx wrangler login                              # opens browser; free Cloudflare account
+npx wrangler secret put MAILCHIMP_API_KEY       # Mailchimp key with data center suffix
+npx wrangler secret put ACCESS_PASSWORD         # password that gates connections (min 12 chars)
+npx wrangler secret put OAUTH_SIGNING_SECRET    # random string, min 32 chars — keep it stable
+npm run deploy
+```
 
-**Connect** — in claude.ai: Settings → Connectors → Add custom connector → enter `https://<your-host>/mcp`. Claude opens the authorization page; enter your `ACCESS_PASSWORD` to approve. Tokens are valid for 30 days, after which claude.ai re-authorizes.
+`wrangler deploy` prints the URL, e.g. `https://mailchimp-mcp.<your-subdomain>.workers.dev`.
 
-**How auth works**: the server implements OAuth 2.1 (dynamic client registration + PKCE) gated by the single access password. Tokens, codes, and client registrations are HMAC-signed and stateless — no database, and restarts don't invalidate connections (as long as `OAUTH_SIGNING_SECRET` is unchanged). Anyone without the password cannot connect, and every MCP request requires a valid bearer token.
+**Connect** — in claude.ai: Settings → Connectors → Add custom connector → enter `https://mailchimp-mcp.<your-subdomain>.workers.dev/mcp`. Claude opens the authorization page; enter your `ACCESS_PASSWORD` to approve. Tokens are valid for 30 days, after which claude.ai re-authorizes. Custom connectors require a Pro/Max/Team/Enterprise plan.
+
+**How auth works**: the worker implements OAuth 2.1 (dynamic client registration + PKCE) gated by the single access password. Tokens, codes, and client registrations are HMAC-signed and stateless — no database, and redeploys don't invalidate connections (as long as `OAUTH_SIGNING_SECRET` is unchanged). Anyone without the password cannot connect, and every MCP request requires a valid bearer token. To revoke all existing connections at once, rotate `OAUTH_SIGNING_SECRET`.
 
 ### As a plain MCP server
 
@@ -109,7 +113,8 @@ All read tools from the original server are included (list/get pairs unless note
 npm install
 npm run build     # compile TypeScript to build/
 npm run bundle    # bundle stdio server to dist/index.js (single file, committed for plugin use)
-npm start         # run the remote HTTP server (build/http.js)
+npm run dev       # run the Cloudflare Worker locally (secrets from .dev.vars)
+npm run deploy    # deploy the worker to Cloudflare
 npm run inspector # test with the MCP inspector
 ```
 
