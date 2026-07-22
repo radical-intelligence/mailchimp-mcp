@@ -17,7 +17,7 @@ export function createMcpServer(mailchimpService: MailchimpService): Server {
   const server = new Server(
     {
       name: "mailchimp-mcp-server",
-      version: "2.1.0",
+      version: "2.2.0",
     },
     {
       capabilities: {

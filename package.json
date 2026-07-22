@@ -1,6 +1,6 @@
 {
   "name": "@radical-intelligence/mailchimp-plugin-server",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "MCP server for the Mailchimp Marketing API with read and write support: audiences, campaigns, templates, reports, sending and scheduling",
   "author": "Radical Intelligence",
   "license": "MIT",
