@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {
   MailchimpAutomation,
   MailchimpAutomationEmail,
@@ -797,5 +798,115 @@ export class MailchimpService {
       `/campaigns/${campaignId}/actions/unschedule`,
       { method: "POST" }
     );
+  }
+
+  // Audience & Member Management (write)
+
+  // Mailchimp addresses members by the MD5 of the lowercased email
+  private subscriberHash(email: string): string {
+    return crypto
+      .createHash("md5")
+      .update(email.toLowerCase().trim())
+      .digest("hex");
+  }
+
+  async createAudience(options: {
+    name: string;
+    permissionReminder: string;
+    contact: {
+      company: string;
+      address1: string;
+      city: string;
+      state: string;
+      zip: string;
+      country: string;
+    };
+    fromName: string;
+    fromEmail: string;
+    language?: string;
+  }): Promise<MailchimpList> {
+    return await this.makeRequest("/lists", {
+      method: "POST",
+      body: JSON.stringify({
+        name: options.name,
+        permission_reminder: options.permissionReminder,
+        contact: options.contact,
+        campaign_defaults: {
+          from_name: options.fromName,
+          from_email: options.fromEmail,
+          subject: "",
+          language: options.language || "en",
+        },
+        email_type_option: false,
+      }),
+    });
+  }
+
+  async upsertMember(options: {
+    listId: string;
+    email: string;
+    statusIfNew: string;
+    status?: string;
+    mergeFields?: Record<string, any>;
+    tags?: string[];
+  }): Promise<MailchimpMember> {
+    const hash = this.subscriberHash(options.email);
+    const body: any = {
+      email_address: options.email,
+      status_if_new: options.statusIfNew,
+    };
+    if (options.status) body.status = options.status;
+    if (options.mergeFields) body.merge_fields = options.mergeFields;
+
+    const member = await this.makeRequest<MailchimpMember>(
+      `/lists/${options.listId}/members/${hash}`,
+      { method: "PUT", body: JSON.stringify(body) }
+    );
+
+    // The upsert endpoint doesn't accept tags; apply them separately
+    if (options.tags && options.tags.length > 0) {
+      await this.updateMemberTags(options.listId, options.email, options.tags);
+    }
+    return member;
+  }
+
+  async updateMemberTags(
+    listId: string,
+    email: string,
+    tagsToAdd: string[] = [],
+    tagsToRemove: string[] = []
+  ): Promise<any> {
+    const hash = this.subscriberHash(email);
+    return await this.makeRequest(
+      `/lists/${listId}/members/${hash}/tags`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          tags: [
+            ...tagsToAdd.map((name) => ({ name, status: "active" })),
+            ...tagsToRemove.map((name) => ({ name, status: "inactive" })),
+          ],
+        }),
+      }
+    );
+  }
+
+  // Archives (does not permanently delete) — the member can be re-added
+  async archiveMember(listId: string, email: string): Promise<any> {
+    const hash = this.subscriberHash(email);
+    return await this.makeRequest(`/lists/${listId}/members/${hash}`, {
+      method: "DELETE",
+    });
+  }
+
+  async createStaticSegment(
+    listId: string,
+    name: string,
+    emails: string[]
+  ): Promise<MailchimpSegment> {
+    return await this.makeRequest(`/lists/${listId}/segments`, {
+      method: "POST",
+      body: JSON.stringify({ name, static_segment: emails }),
+    });
   }
 }

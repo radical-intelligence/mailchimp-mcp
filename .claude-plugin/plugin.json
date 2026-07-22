@@ -1,13 +1,13 @@
 {
   "name": "mailchimp",
-  "description": "Mailchimp Marketing API tools for Claude — read audiences, campaigns, templates and reports; create and update templates; create, edit, send and schedule campaigns.",
-  "version": "2.0.0",
+  "description": "Mailchimp Marketing API tools for Claude — read audiences, campaigns, templates and reports; manage contacts, tags and segments; create and update templates; create, edit, send and schedule campaigns.",
+  "version": "2.2.0",
   "author": {
     "name": "Radical Intelligence",
     "url": "https://radicalintelligence.ai"
   },
-  "homepage": "https://github.com/radical-intelligence/mailchimp-plugin",
-  "repository": "https://github.com/radical-intelligence/mailchimp-plugin",
+  "homepage": "https://github.com/radical-intelligence/mailchimp-mcp",
+  "repository": "https://github.com/radical-intelligence/mailchimp-mcp",
   "license": "MIT",
   "keywords": ["mailchimp", "email", "marketing", "campaigns", "templates"],
   "mcpServers": "./.mcp.json"

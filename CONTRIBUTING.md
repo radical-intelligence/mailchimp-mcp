@@ -3,8 +3,8 @@
 ## Development setup
 
 ```bash
-git clone https://github.com/radical-intelligence/mailchimp-plugin.git
-cd mailchimp-plugin
+git clone https://github.com/radical-intelligence/mailchimp-mcp.git
+cd mailchimp-mcp
 npm install
 ```
 

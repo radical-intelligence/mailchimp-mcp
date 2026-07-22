@@ -110,7 +110,7 @@ var require_main = __commonJS({
     var fs = __require("fs");
     var path = __require("path");
     var os = __require("os");
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     var packageJson = require_package();
     var version2 = packageJson.version;
     var LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
@@ -329,7 +329,7 @@ var require_main = __commonJS({
       const authTag = ciphertext.subarray(-16);
       ciphertext = ciphertext.subarray(12, -16);
       try {
-        const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
+        const aesgcm = crypto2.createDecipheriv("aes-256-gcm", key, nonce);
         aesgcm.setAuthTag(authTag);
         return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
       } catch (error2) {
@@ -12603,6 +12603,7 @@ var StdioServerTransport = class {
 };
 
 // src/services/mailchimp.ts
+import crypto from "node:crypto";
 var MailchimpService = class {
   apiKey;
   dataCenter;
@@ -13171,6 +13172,73 @@ var MailchimpService = class {
       `/campaigns/${campaignId}/actions/unschedule`,
       { method: "POST" }
     );
+  }
+  // Audience & Member Management (write)
+  // Mailchimp addresses members by the MD5 of the lowercased email
+  subscriberHash(email2) {
+    return crypto.createHash("md5").update(email2.toLowerCase().trim()).digest("hex");
+  }
+  async createAudience(options) {
+    return await this.makeRequest("/lists", {
+      method: "POST",
+      body: JSON.stringify({
+        name: options.name,
+        permission_reminder: options.permissionReminder,
+        contact: options.contact,
+        campaign_defaults: {
+          from_name: options.fromName,
+          from_email: options.fromEmail,
+          subject: "",
+          language: options.language || "en"
+        },
+        email_type_option: false
+      })
+    });
+  }
+  async upsertMember(options) {
+    const hash = this.subscriberHash(options.email);
+    const body = {
+      email_address: options.email,
+      status_if_new: options.statusIfNew
+    };
+    if (options.status) body.status = options.status;
+    if (options.mergeFields) body.merge_fields = options.mergeFields;
+    const member = await this.makeRequest(
+      `/lists/${options.listId}/members/${hash}`,
+      { method: "PUT", body: JSON.stringify(body) }
+    );
+    if (options.tags && options.tags.length > 0) {
+      await this.updateMemberTags(options.listId, options.email, options.tags);
+    }
+    return member;
+  }
+  async updateMemberTags(listId, email2, tagsToAdd = [], tagsToRemove = []) {
+    const hash = this.subscriberHash(email2);
+    return await this.makeRequest(
+      `/lists/${listId}/members/${hash}/tags`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          tags: [
+            ...tagsToAdd.map((name) => ({ name, status: "active" })),
+            ...tagsToRemove.map((name) => ({ name, status: "inactive" }))
+          ]
+        })
+      }
+    );
+  }
+  // Archives (does not permanently delete) — the member can be re-added
+  async archiveMember(listId, email2) {
+    const hash = this.subscriberHash(email2);
+    return await this.makeRequest(`/lists/${listId}/members/${hash}`, {
+      method: "DELETE"
+    });
+  }
+  async createStaticSegment(listId, name, emails) {
+    return await this.makeRequest(`/lists/${listId}/segments`, {
+      method: "POST",
+      body: JSON.stringify({ name, static_segment: emails })
+    });
   }
 };
 
@@ -15665,6 +15733,164 @@ var getToolDefinitions = (service) => [
       },
       required: ["campaign_id"]
     }
+  },
+  {
+    name: "create_audience",
+    description: "Create a new audience (list). Note: Mailchimp plans cap the number of audiences (the free plan allows only one), so this may fail with a plan limit error \u2014 most workflows should add contacts to an existing audience with upsert_member instead. The contact address fields are required by anti-spam law and appear in email footers.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The audience name" },
+        permission_reminder: {
+          type: "string",
+          description: "Shown in email footers to remind people how they got on the list, e.g. 'You are receiving this because you donated to or registered with us.'"
+        },
+        company: {
+          type: "string",
+          description: "Organization name for the required contact address"
+        },
+        address1: { type: "string", description: "Street address" },
+        city: { type: "string", description: "City" },
+        state: { type: "string", description: "State/region" },
+        zip: { type: "string", description: "Postal code" },
+        country: {
+          type: "string",
+          description: "Two-letter country code, e.g. AU or US"
+        },
+        from_name: {
+          type: "string",
+          description: "Default sender name for campaigns to this audience"
+        },
+        from_email: {
+          type: "string",
+          description: "Default sender email for campaigns to this audience"
+        },
+        language: {
+          type: "string",
+          description: "Default language code (defaults to 'en')"
+        }
+      },
+      required: [
+        "name",
+        "permission_reminder",
+        "company",
+        "address1",
+        "city",
+        "state",
+        "zip",
+        "country",
+        "from_name",
+        "from_email"
+      ]
+    }
+  },
+  {
+    name: "upsert_member",
+    description: "Add a contact to an audience, or update them if they already exist (matched by email). COMPLIANCE: only add people who gave permission to be emailed. Use status_if_new 'subscribed' only with documented consent; 'pending' sends them a double-opt-in confirmation email; 'transactional' allows no marketing email.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        list_id: {
+          type: "string",
+          description: "The audience (list) ID"
+        },
+        email: {
+          type: "string",
+          description: "The contact's email address"
+        },
+        status_if_new: {
+          type: "string",
+          enum: ["subscribed", "pending", "unsubscribed", "transactional"],
+          description: "Status to use if the contact doesn't exist yet. 'subscribed' requires documented consent; 'pending' triggers a confirmation email."
+        },
+        status: {
+          type: "string",
+          enum: ["subscribed", "pending", "unsubscribed"],
+          description: "Optional: change the status of an EXISTING contact. Never use this to re-subscribe someone who unsubscribed."
+        },
+        first_name: { type: "string", description: "First name" },
+        last_name: { type: "string", description: "Last name" },
+        merge_fields: {
+          type: "object",
+          description: 'Optional additional merge fields as {TAG: value}, e.g. {"PHONE": "..."} \u2014 overrides first_name/last_name if FNAME/LNAME included'
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional tags to apply to the contact"
+        }
+      },
+      required: ["list_id", "email", "status_if_new"]
+    }
+  },
+  {
+    name: "update_member_tags",
+    description: "Add and/or remove tags on an existing contact",
+    inputSchema: {
+      type: "object",
+      properties: {
+        list_id: {
+          type: "string",
+          description: "The audience (list) ID"
+        },
+        email: {
+          type: "string",
+          description: "The contact's email address"
+        },
+        tags_to_add: {
+          type: "array",
+          items: { type: "string" },
+          description: "Tags to add"
+        },
+        tags_to_remove: {
+          type: "array",
+          items: { type: "string" },
+          description: "Tags to remove"
+        }
+      },
+      required: ["list_id", "email"]
+    }
+  },
+  {
+    name: "archive_member",
+    description: "Archive a contact (removes them from the audience but keeps their history; they can be re-added later). This does NOT permanently delete.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        list_id: {
+          type: "string",
+          description: "The audience (list) ID"
+        },
+        email: {
+          type: "string",
+          description: "The contact's email address"
+        }
+      },
+      required: ["list_id", "email"]
+    }
+  },
+  {
+    name: "create_static_segment",
+    description: "Create a static segment (a fixed named subset of an audience) from a list of member emails \u2014 useful as a campaign target. Emails must already be members of the audience.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        list_id: {
+          type: "string",
+          description: "The audience (list) ID"
+        },
+        name: {
+          type: "string",
+          description: "The segment name"
+        },
+        emails: {
+          type: "array",
+          items: { type: "string" },
+          description: "Member emails to include (must already exist in the audience)"
+        }
+      },
+      required: ["list_id", "name", "emails"]
+    }
   }
 ];
 var handleToolCall = async (service, name, args) => {
@@ -16392,6 +16618,105 @@ var handleToolCall = async (service, name, args) => {
         ]
       };
     }
+    case "create_audience": {
+      const audience = await service.createAudience({
+        name: args.name,
+        permissionReminder: args.permission_reminder,
+        contact: {
+          company: args.company,
+          address1: args.address1,
+          city: args.city,
+          state: args.state,
+          zip: args.zip,
+          country: args.country
+        },
+        fromName: args.from_name,
+        fromEmail: args.from_email,
+        language: args.language
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(audience, null, 2)
+          }
+        ]
+      };
+    }
+    case "upsert_member": {
+      const mergeFields2 = {};
+      if (args.first_name) mergeFields2.FNAME = args.first_name;
+      if (args.last_name) mergeFields2.LNAME = args.last_name;
+      Object.assign(mergeFields2, args.merge_fields ?? {});
+      const member2 = await service.upsertMember({
+        listId: args.list_id,
+        email: args.email,
+        statusIfNew: args.status_if_new,
+        status: args.status,
+        mergeFields: Object.keys(mergeFields2).length ? mergeFields2 : void 0,
+        tags: args.tags
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                id: member2.id,
+                email_address: member2.email_address,
+                status: member2.status,
+                merge_fields: member2.merge_fields,
+                tags_applied: args.tags ?? []
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+    case "update_member_tags": {
+      await service.updateMemberTags(
+        args.list_id,
+        args.email,
+        args.tags_to_add ?? [],
+        args.tags_to_remove ?? []
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Tags updated for ${args.email}: added ${(args.tags_to_add ?? []).join(", ") || "none"}; removed ${(args.tags_to_remove ?? []).join(", ") || "none"}.`
+          }
+        ]
+      };
+    }
+    case "archive_member": {
+      await service.archiveMember(args.list_id, args.email);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${args.email} archived from audience ${args.list_id} (not permanently deleted; can be re-added).`
+          }
+        ]
+      };
+    }
+    case "create_static_segment": {
+      const segment2 = await service.createStaticSegment(
+        args.list_id,
+        args.name,
+        args.emails
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(segment2, null, 2)
+          }
+        ]
+      };
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -16402,7 +16727,7 @@ function createMcpServer(mailchimpService2) {
   const server2 = new Server(
     {
       name: "mailchimp-mcp-server",
-      version: "2.1.0"
+      version: "2.2.0"
     },
     {
       capabilities: {

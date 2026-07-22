@@ -5,7 +5,7 @@ Installs the server into [Claude Code](https://claude.com/claude-code) with two 
 ## Install
 
 ```
-/plugin marketplace add radical-intelligence/mailchimp-plugin
+/plugin marketplace add radical-intelligence/mailchimp-mcp
 /plugin install mailchimp@radical-intelligence
 ```
 

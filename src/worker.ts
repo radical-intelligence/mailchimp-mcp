@@ -22,7 +22,7 @@ const SUPPORTED_PROTOCOL_VERSIONS = [
   "2025-03-26",
   "2024-11-05",
 ];
-const SERVER_INFO = { name: "mailchimp-mcp-server", version: "2.1.0" };
+const SERVER_INFO = { name: "mailchimp-mcp-server", version: "2.2.0" };
 
 function json(
   body: unknown,

@@ -1,8 +1,8 @@
 # Mailchimp MCP Server
 
-A Model Context Protocol (MCP) server for the Mailchimp Marketing API v3 with **read and write** support: read audiences, campaigns, templates and reports; create and update templates; create, edit, send and schedule campaigns.
+A Model Context Protocol (MCP) server for the Mailchimp Marketing API v3 with **read and write** support: read audiences, campaigns, templates and reports; manage contacts, tags and segments; create and update templates; create, edit, send and schedule campaigns.
 
-47 tools total — see the [tool reference](docs/tools.md).
+52 tools total — see the [tool reference](docs/tools.md).
 
 ## Ways to use it
 
@@ -15,14 +15,14 @@ A Model Context Protocol (MCP) server for the Mailchimp Marketing API v3 with **
 ## Quick start (Claude Code)
 
 ```
-/plugin marketplace add radical-intelligence/mailchimp-plugin
+/plugin marketplace add radical-intelligence/mailchimp-mcp
 /plugin install mailchimp@radical-intelligence
 export MAILCHIMP_API_KEY=your-api-key-here-us1
 ```
 
 ## Documentation
 
-- [Tool reference](docs/tools.md) — all 47 tools, the template→campaign→send flow, constraints
+- [Tool reference](docs/tools.md) — all 52 tools, the template→campaign→send flow, constraints
 - [Claude Code plugin](docs/claude-code-plugin.md) — install and configure
 - [Deployment](docs/deployment.md) — host the remote server on Cloudflare Workers (free tier)
 - [claude.ai connector](docs/claude-ai-connector.md) — first-time setup for end users, troubleshooting

@@ -1,10 +1,24 @@
 # Tool Reference
 
-The server exposes 47 tools over the Mailchimp Marketing API v3 — full read coverage plus write support for templates and campaigns.
+The server exposes 52 tools over the Mailchimp Marketing API v3 — full read coverage plus write support for audiences, contacts, templates, and campaigns.
 
 ## Write tools
 
 These tools modify your Mailchimp account. `send_campaign` sends real email and is guarded by a required `confirm: true` parameter — clients should always get explicit user approval first.
+
+### Audiences & contacts
+
+| Tool | What it does |
+| --- | --- |
+| `create_audience` | Create a new audience (`POST /lists`) — note most Mailchimp plans cap audience count (free plan: one) |
+| `upsert_member` | Add a contact to an audience or update them if they exist (matched by email); optional name, merge fields, and tags |
+| `update_member_tags` | Add/remove tags on a contact |
+| `archive_member` | Archive a contact (reversible — keeps history, can be re-added; not a permanent delete) |
+| `create_static_segment` | Create a fixed named subset of an audience from member emails, usable as a campaign target |
+
+**Compliance note**: only add contacts who gave permission to be emailed. `upsert_member`'s `status_if_new: "subscribed"` asserts documented consent; `"pending"` sends a double-opt-in confirmation email instead.
+
+### Templates & campaigns
 
 | Tool | What it does |
 | --- | --- |
