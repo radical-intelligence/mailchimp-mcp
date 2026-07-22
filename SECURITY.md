@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report vulnerabilities privately via [GitHub security advisories](https://github.com/radical-intelligence/mailchimp-plugin/security/advisories/new) rather than public issues.
+Please report vulnerabilities privately via [GitHub security advisories](https://github.com/radical-intelligence/mailchimp-mcp/security/advisories/new) rather than public issues.
 
 ## Model
 

@@ -15,7 +15,7 @@ A Model Context Protocol (MCP) server for the Mailchimp Marketing API v3 with **
 ## Quick start (Claude Code)
 
 ```
-/plugin marketplace add radical-intelligence/mailchimp-plugin
+/plugin marketplace add radical-intelligence/mailchimp-mcp
 /plugin install mailchimp@radical-intelligence
 export MAILCHIMP_API_KEY=your-api-key-here-us1
 ```
