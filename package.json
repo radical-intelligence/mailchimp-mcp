@@ -1,5 +1,5 @@
 {
-  "name": "@radical-intelligence/mailchimp-mcp-server",
+  "name": "@radical-intelligence/mailchimp-plugin-server",
   "version": "2.1.0",
   "description": "MCP server for the Mailchimp Marketing API with read and write support: audiences, campaigns, templates, reports, sending and scheduling",
   "author": "Radical Intelligence",
@@ -43,12 +43,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/radical-intelligence/mailchimp-mcp.git"
+    "url": "git+https://github.com/radical-intelligence/mailchimp-plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/radical-intelligence/mailchimp-mcp/issues"
+    "url": "https://github.com/radical-intelligence/mailchimp-plugin/issues"
   },
-  "homepage": "https://github.com/radical-intelligence/mailchimp-mcp#readme",
+  "homepage": "https://github.com/radical-intelligence/mailchimp-plugin#readme",
   "publishConfig": {
     "access": "public"
   }
