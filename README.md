@@ -19,6 +19,27 @@ Then make your API key available in your environment (e.g. in `~/.zshrc`):
 export MAILCHIMP_API_KEY=your-api-key-here-us1
 ```
 
+### As a claude.ai custom connector (web / mobile / desktop app)
+
+The repo includes a remote MCP server (Streamable HTTP + OAuth) that runs on [Cloudflare Workers](https://workers.cloudflare.com/) — the free tier is enough (100k requests/day, no cold-start spin-downs, no credit card). A connector added once on claude.ai is available in the web app, mobile apps, and desktop app.
+
+**Deploy** (one time, ~5 minutes):
+
+```bash
+npm install
+npx wrangler login                              # opens browser; free Cloudflare account
+npx wrangler secret put MAILCHIMP_API_KEY       # Mailchimp key with data center suffix
+npx wrangler secret put ACCESS_PASSWORD         # password that gates connections (min 12 chars)
+npx wrangler secret put OAUTH_SIGNING_SECRET    # random string, min 32 chars — keep it stable
+npm run deploy
+```
+
+`wrangler deploy` prints the URL, e.g. `https://mailchimp-mcp.<your-subdomain>.workers.dev`.
+
+**Connect** — in claude.ai: Settings → Connectors → Add custom connector → enter `https://mailchimp-mcp.<your-subdomain>.workers.dev/mcp`. Claude opens the authorization page; enter your `ACCESS_PASSWORD` to approve. Tokens are valid for 30 days, after which claude.ai re-authorizes. Custom connectors require a Pro/Max/Team/Enterprise plan.
+
+**How auth works**: the worker implements OAuth 2.1 (dynamic client registration + PKCE) gated by the single access password. Tokens, codes, and client registrations are HMAC-signed and stateless — no database, and redeploys don't invalidate connections (as long as `OAUTH_SIGNING_SECRET` is unchanged). Anyone without the password cannot connect, and every MCP request requires a valid bearer token. To revoke all existing connections at once, rotate `OAUTH_SIGNING_SECRET`.
+
 ### As a plain MCP server
 
 Configure any MCP client to use:
@@ -91,7 +112,9 @@ All read tools from the original server are included (list/get pairs unless note
 ```bash
 npm install
 npm run build     # compile TypeScript to build/
-npm run bundle    # bundle to dist/index.js (single file, committed for plugin use)
+npm run bundle    # bundle stdio server to dist/index.js (single file, committed for plugin use)
+npm run dev       # run the Cloudflare Worker locally (secrets from .dev.vars)
+npm run deploy    # deploy the worker to Cloudflare
 npm run inspector # test with the MCP inspector
 ```
 

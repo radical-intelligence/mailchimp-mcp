@@ -7,6 +7,10 @@ yarn-error.log*
 # Build output (dist/ is committed so the Claude Code plugin runs without a build step)
 build/
 
+# Cloudflare
+.wrangler/
+.dev.vars
+
 # Environment variables
 .env
 .env.local
