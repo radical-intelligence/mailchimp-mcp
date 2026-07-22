@@ -6,8 +6,8 @@
     "name": "Radical Intelligence",
     "url": "https://radicalintelligence.ai"
   },
-  "homepage": "https://github.com/radical-intelligence/mailchimp-mcp",
-  "repository": "https://github.com/radical-intelligence/mailchimp-mcp",
+  "homepage": "https://github.com/radical-intelligence/mailchimp-plugin",
+  "repository": "https://github.com/radical-intelligence/mailchimp-plugin",
   "license": "MIT",
   "keywords": ["mailchimp", "email", "marketing", "campaigns", "templates"],
   "mcpServers": "./.mcp.json"
